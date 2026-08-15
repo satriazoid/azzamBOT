@@ -27,9 +27,6 @@ client.on('ready', () => {
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
-    // ===================================================
-    // 1. PERINTAH MEMULAI PEMANTAUAN (!cektidur)
-    // ===================================================
     if (message.content.startsWith('!join')) {
         const targetUser = message.mentions.users.first() || message.author;
         const voiceChannel = message.member.voice.channel;
@@ -39,10 +36,10 @@ client.on('messageCreate', async (message) => {
         }
 
         if (activeLoopTimers.has(message.guild.id)) {
-            return message.reply('Peringatan: Pemantauan otomatis sedang berjalan di server ini. Gunakan "!stopcektidur" untuk menghentikan.');
+            return message.reply('Peringatan: Pemantauan otomatis sedang berjalan di server ini. Gunakan "!out" untuk menghentikan.');
         }
 
-        message.reply(`[SISTEM] Memulai pemantauan status tidur untuk **${targetUser.username}** (Interval: 2 menit).`);
+        message.reply(`[SISTEM] Memulai pemantauan status tidur untuk **${targetUser.username}** (Interval: 5 menit).`);
 
         const connection = joinVoiceChannel({
             channelId: voiceChannel.id,
@@ -80,21 +77,28 @@ client.on('messageCreate', async (message) => {
                 setTimeout(() => {
                     audioStream.destroy();
 
+                    const resultPlayer = createAudioPlayer();
+
                     if (userResponded) {
-                        // KONDISI TRUE: User Merespon / Tidak Tidur
                         message.channel.send(
                             `\`\`\`\n` +
-                            `----------------------------------------\n` +
+                            `--------------------------------\n` +
                             `HASIL DETEKSI: RESPONS TERDETEKSI\n` +
-                            `----------------------------------------\n` +
+                            `--------------------------------\n` +
                             `Target  : ${targetUser.username}\n` +
                             `Hasil   : TRUE\n` +
-                            `Status  : ${targetUser.username} tidak tidur\n` +
-                            `----------------------------------------\n` +
+                            `Status  : ${targetUser.username} masih terjaga\n` +
+                            `-------------------------------\n` +
                             `\`\`\``
                         );
+
+                        // Memutar audio true.mp3 & Bot Tetap Stay di VC
+                        const resourceTrue = createAudioResource(path.join(__dirname, 'true.mp3'));
+                        resultPlayer.play(resourceTrue);
+                        connection.subscribe(resultPlayer);
+
                     } else {
-                        // KONDISI FALSE: Tidak ada respon / User Tidur
+                        // KONDISI FALSE: Tidak Ada Respon / User Tidur
                         message.channel.send(
                             `\`\`\`\n` +
                             `----------------------------------------\n` +
@@ -102,16 +106,26 @@ client.on('messageCreate', async (message) => {
                             `----------------------------------------\n` +
                             `Target  : ${targetUser.username}\n` +
                             `Hasil   : FALSE\n` +
-                            `Status  : ${targetUser.username} sedang tidur\n` +
+                            `Status  : ${targetUser.username} tidur\n` +
                             `----------------------------------------\n` +
                             `\`\`\``
                         );
 
-                        // Memutar suara kedua (alarm.mp3) karena hasilnya FALSE
-                        const alarmPlayer = createAudioPlayer();
-                        const resourceAlarm = createAudioResource(path.join(__dirname, 'alarm.mp3'));
-                        alarmPlayer.play(resourceAlarm);
-                        connection.subscribe(alarmPlayer);
+                        // Memutar audio false.mp3
+                        const resourceFalse = createAudioResource(path.join(__dirname, 'false.mp3'));
+                        resultPlayer.play(resourceFalse);
+                        connection.subscribe(resultPlayer);
+
+                        // Keluar dari VC setelah false.mp3 selesai diputar
+                        resultPlayer.on(AudioPlayerStatus.Idle, () => {
+                            const timerData = activeLoopTimers.get(message.guild.id);
+                            if (timerData) {
+                                clearInterval(timerData.intervalId);
+                                activeLoopTimers.delete(message.guild.id);
+                            }
+                            connection.destroy();
+                            message.channel.send('[SISTEM] User terdeteksi tidur. Bot keluar dari Voice Channel.');
+                        });
                     }
                 }, 8000);
             });
@@ -120,14 +134,11 @@ client.on('messageCreate', async (message) => {
         // Jalankan tes pertama kali
         jalankanPengecekan();
 
-        // Ulangi setiap 2 menit (120000 ms)
-        const intervalId = setInterval(jalankanPengecekan, 120000);
+        // Ulangi setiap 5 menit (300000 ms)
+        const intervalId = setInterval(jalankanPengecekan, 300000);
         activeLoopTimers.set(message.guild.id, { intervalId, connection });
     }
 
-    // ===================================================
-    // 2. PERINTAH MENGHENTIKAN PEMANTAUAN (!stopcektidur)
-    // ===================================================
     if (message.content === '!out') {
         const timerData = activeLoopTimers.get(message.guild.id);
 
