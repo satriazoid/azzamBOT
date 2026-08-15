@@ -82,13 +82,10 @@ client.on('messageCreate', async (message) => {
                     if (userResponded) {
                         message.channel.send(
                             `\`\`\`\n` +
-                            `--------------------------------\n` +
-                            `HASIL DETEKSI: RESPONS TERDETEKSI\n` +
-                            `--------------------------------\n` +
+                            `HASIL DETEKSI:RESPONS TERDETEKSI\n` +
                             `Target  : ${targetUser.username}\n` +
                             `Hasil   : TRUE\n` +
                             `Status  : ${targetUser.username} masih terjaga\n` +
-                            `-------------------------------\n` +
                             `\`\`\``
                         );
 
@@ -101,13 +98,10 @@ client.on('messageCreate', async (message) => {
                         // KONDISI FALSE: Tidak Ada Respon / User Tidur
                         message.channel.send(
                             `\`\`\`\n` +
-                            `----------------------------------------\n` +
                             `HASIL DETEKSI: TIDAK ADA RESPONS\n` +
-                            `----------------------------------------\n` +
                             `Target  : ${targetUser.username}\n` +
                             `Hasil   : FALSE\n` +
                             `Status  : ${targetUser.username} tidur\n` +
-                            `----------------------------------------\n` +
                             `\`\`\``
                         );
 
